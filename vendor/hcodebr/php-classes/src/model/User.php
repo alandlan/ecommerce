@@ -2,12 +2,15 @@
 
 namespace Hcode\Model;
 
+//use \Hcode\Model\Mailer;
 use \Hcode\DB\Sql;
 use \Hcode\Model;
+use \Hcode\Mailer;
 
 class User extends Model{
 
 	const SESSION = "User";
+	const SECRET = "HcodePhp7_Secret";
 
 	public static function login($login, $password){
 
@@ -127,6 +130,92 @@ class User extends Model{
      		":iduser"=>$this->getiduser()
      	));
 
+     }
+
+     public static function getForgot($email){
+
+     	$sql = new Sql();
+
+     	$results = $sql->select("
+			select *
+			from tb_persons a
+			inner join tb_users b using(idperson)
+			where a.desemail = :email;", array(":email"=>$email
+		));
+
+		if(count($results) === 0){
+			
+			throw new \Exception("Não foi possívelrecuperar a senha.");
+			
+		}
+		else{
+
+			$data = $results[0];
+
+			$results2 = $sql->select("CALL sp_userspasswordsrecoveries_create(:iduser, :desip)",array(
+				":iduser"=>$data["iduser"],
+				":desip"=>$_SERVER["REMOTE_ADDR"]
+			));
+
+			if(count($results2) === 0){
+
+				throw new \Exception("Não foi possívelrecuperar a senha.");
+				
+			}
+			else{
+
+				$dataRecovery = $results2[0];
+
+				$code = base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_128, User::SECRET, $dataRecovery["idrecovery"], MCRYPT_MODE_ECB));
+
+				$link = "http://www.hcodecommerce.com.br/admin/forgot/reset?code=$code";
+
+				$mailer = new Mailer($data["desemail"],$data["desperson"],"Redefinir Senha do Hcode Store.","forgot",
+					array(
+						"name"=>$data["desperson"],
+						"link"=>$link
+						));
+
+				$mailer->send();
+
+				return $data;
+
+			}
+
+		}
+
+     }
+
+     public static function validForgotDecrypt($code){
+
+     		//base64_decode($code);
+
+     		$idrecovery = mcrypt_decrypt(MCRYPT_RIJNDAEL_128, User::SECRET, base64_decode($code), MCRYPT_MODE_ECB);
+
+     		$sql = new Sql();
+
+     		$results2 = $sql->select("
+     			select * from tb_userspasswordsrecoveries a
+				inner join tb_users b using(iduser)
+				inner join tb_persons c using(idperson)
+				where a.idrecovery = :idrecovey
+				and a.dtrecovery IS NULL
+				and date_add(a.dtregister,interval 1 hour) >= now();
+     			", array(":idrecovery"=>$idrecovery));
+
+     		if(count($results) === 0){
+
+     			throw new \Exception("Não foi possivel recuperar a senha");
+     			
+     		}
+     		else{
+
+     			return $results2[0];
+ 				//$data = $results[0];
+	     
+	     		//$this->setData($data);
+
+     		}
      }
 
 }
