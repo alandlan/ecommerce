@@ -6,8 +6,8 @@
 
 	class Mailer{
 
-		const USERNAME = "alanhorcrux@gmail.com";
-		const PASSWORD = "Horcrux7";
+		const USERNAME = "";
+		const PASSWORD = "";
 		const NAME_FROM = "Hcode Store";
 
 		private $mail;
@@ -71,7 +71,6 @@
 				$this->mail->setFrom(Mailer::USERNAME, Mailer::NAME_FROM);
 
 				//Set an alternative reply-to address
-				//$mail->addReplyTo('alanhorcrux@gmail.com', 'First Last');
 
 				//Set who the message is to be sent to
 				$this->mail->addAddress($toAddress, $toName);
